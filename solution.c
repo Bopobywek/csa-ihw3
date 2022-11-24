@@ -3,17 +3,16 @@
 #include <time.h>
 #include <unistd.h>
 
-double EPS = 1E-5;
-
+double EPS = 1E-7;
 
 double calculate(double x) {
-    double result = 0;
-    double component  = x;
+    double result = 0.0;
+    double component = x;
     long long i = 2;
     while (component < -EPS || component > EPS) {
         result += component;
-        component *= (i - 1) * x;
-        component /= i;
+        component *= x;
+        component *= (double)(i-1) / i;
         ++i;
     }
 
@@ -39,9 +38,30 @@ int printDouble(FILE *stream, double number) {
     return 0;
 }
 
+int validateNumber(double number) {
+    return number <= 0.999 && number >= -1.0;
+}
+
+int max(int a, int b) {
+    if (a > b) {
+        return a;
+    }
+
+    return b;
+}
+
+double min(double a, double b) {
+    if (a > b) {
+        return b;
+    }
+
+    return a;
+}
 
 double getRandomDouble() {
-    return (double)rand() / RAND_MAX * 2.0 - 1.0;
+    // 0 <= random < RAND_MAX
+    int random = max(rand(), 1) - 1;
+    return min((double)random / RAND_MAX * 2.0 - 1.0, 0.999);
 }
 
 int64_t getTimeDiff(struct timespec ts1, struct timespec ts2) {
@@ -51,15 +71,14 @@ int64_t getTimeDiff(struct timespec ts1, struct timespec ts2) {
     return ts1_ms - ts2_ms;
 }
 
-int64_t measureTime(int64_t sample_size) {
+int64_t measureTime(int64_t sample_size, double number) {
     struct timespec start;
     struct timespec end;
     int64_t elapsed = 0;
 
     for (int64_t i = 0; i < sample_size; ++i) {
-        double random = getRandomDouble();
         clock_gettime(CLOCK_MONOTONIC, &start);
-        calculate(random);
+        calculate(number);
         clock_gettime(CLOCK_MONOTONIC, &end);
         elapsed += getTimeDiff(end, start);
     }
@@ -75,15 +94,13 @@ int main(int argc, char *argv[]) {
     int random_flag = 0;
     int test_flag = 0;
     int seed = 42;
-    int random_n = 0;
     int64_t sample_size = 0;
 
-    while ((opt = getopt(argc, argv, "r:t:s:i:o:")) != -1) {
+    while ((opt = getopt(argc, argv, "rt:s:i:o:")) != -1) {
         switch(opt) {
             // Генерация случайного набора
             case 'r':
                 random_flag = 1;
-                random_n = atoi(optarg);
                 break;
                 // Указание входного файла
             case 'i':
@@ -111,20 +128,13 @@ int main(int argc, char *argv[]) {
 
     srand(seed);
 
-    if (test_flag) {
-        printf("Running random tests %ld times...\n", sample_size);
-        int64_t elapsed = measureTime(sample_size);
-        printf("Elapsed time: %ld ms\n", elapsed);
-        return 0;
-    }
-
     double number;
     int status_code = 0;
     if (random_flag) {
         number = getRandomDouble();
         printf("%lf\n", number);
     } else if (input == stdin) {
-        printf("Enter an real number\n");
+        printf("Enter a real number in range [-1; 1):\n");
         status_code = readDouble(input, &number);
     } else {
         status_code = readDouble(input, &number);
@@ -135,7 +145,19 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    status_code = validateNumber(number);
+    if (status_code == 0) {
+        printf("Error! The input number is not in the specified range.\n");
+        return 0;
+    }
+
     double result = calculate(number);
+
+    if (test_flag) {
+        printf("Running current test case %ld times...\n", sample_size);
+        int64_t elapsed = measureTime(sample_size, number);
+        printf("Elapsed time: %ld ms\n", elapsed);
+    }
 
     status_code = printDouble(output, result);
     if (status_code != 0) {
