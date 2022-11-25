@@ -1,4 +1,3 @@
-	.file	"solution.c"
 	.intel_syntax noprefix
 	.text
 	.globl	EPS
@@ -13,8 +12,7 @@ EPS:
 	.globl	calculate
 	.type	calculate, @function
 calculate:
-	endbr64                             # /
-	push	rbp                         # | Пролог функции
+	push	rbp                         # / Пролог функции
 	mov	rbp, rsp                        # |
 
 	movsd	QWORD PTR -40[rbp], xmm0    # | rbp[-40] := xmm0 = double x -- загружаем на стек первый аргумент, переданный через xmm0
@@ -66,8 +64,7 @@ calculate:
 	.globl	readDouble
 	.type	readDouble, @function
 readDouble:
-	endbr64								# /
-	push	rbp							# |
+	push	rbp							# /
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 16							# |
 	
@@ -96,8 +93,7 @@ readDouble:
 	.globl	printDouble
 	.type	printDouble, @function
 printDouble:
-	endbr64								# /
-	push	rbp							# |
+	push	rbp							# /
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 16							# |
 	
@@ -124,8 +120,7 @@ printDouble:
 	.globl	validateNumber
 	.type	validateNumber, @function
 validateNumber:
-	endbr64								# /
-	push	rbp							# | Пролог функции
+	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
 	movsd	QWORD PTR -8[rbp], xmm0		# | rbp[-8] := xmm0 = double number -- загружаем на стек первый переданный аргумент
@@ -148,8 +143,7 @@ validateNumber:
 	.globl	max
 	.type	max, @function
 max:
-	endbr64								# /
-	push	rbp							# | Пролог функции
+	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
 	mov	DWORD PTR -4[rbp], edi			# | rbp[-4] := edi = a -- загружаем на стек первый переданный аргумент
@@ -169,8 +163,7 @@ max:
 	.globl	min
 	.type	min, @function
 min:
-	endbr64								# /
-	push	rbp							# | Пролог функции
+	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
 	movsd	QWORD PTR -8[rbp], xmm0		# | rbp[-8] := xmm0 = a -- загружаем на стек первый переданный аргумент
@@ -192,8 +185,7 @@ min:
 	.globl	getRandomDouble
 	.type	getRandomDouble, @function
 getRandomDouble:
-	endbr64								# /
-	push	rbp							# |
+	push	rbp							# /
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 16							# |
 	
@@ -223,8 +215,7 @@ getRandomDouble:
 	.globl	getTimeDiff
 	.type	getTimeDiff, @function
 getTimeDiff:
-	endbr64								# /
-	push	rbp							# | Пролог функции
+	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
 	mov	rax, rsi						# | rax := rsi = ts1.tv_nsec
@@ -274,8 +265,7 @@ getTimeDiff:
 	.globl	measureTime
 	.type	measureTime, @function
 measureTime:
-	endbr64								# /
-	push	rbp							# |
+	push	rbp							# /
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 80							# |
 	
@@ -348,8 +338,7 @@ measureTime:
 	.globl	main
 	.type	main, @function
 main:
-	endbr64								# /
-	push	rbp							# |
+	push	rbp							# /
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 96							# |
 	
@@ -565,21 +554,3 @@ main:
 .LC7:
 	.long	0
 	.long	1072693248
-	.ident	"GCC: (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0"
-	.section	.note.GNU-stack,"",@progbits
-	.section	.note.gnu.property,"a"
-	.align 8
-	.long	 1f - 0f
-	.long	 4f - 1f
-	.long	 5
-0:
-	.string	 "GNU"
-1:
-	.align 8
-	.long	 0xc0000002
-	.long	 3f - 2f
-2:
-	.long	 0x3
-3:
-	.align 8
-4:

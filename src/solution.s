@@ -250,9 +250,10 @@ measureTime:
 	endbr64
 	push	rbp
 	mov	rbp, rsp
-	sub	rsp, 64
+	sub	rsp, 80
 	mov	QWORD PTR -56[rbp], rdi
 	movsd	QWORD PTR -64[rbp], xmm0
+	mov	QWORD PTR -72[rbp], rsi
 	mov	QWORD PTR -8[rbp], 0
 	mov	QWORD PTR -16[rbp], 0
 	jmp	.L33
@@ -264,6 +265,9 @@ measureTime:
 	mov	rax, QWORD PTR -64[rbp]
 	movq	xmm0, rax
 	call	calculate
+	movq	rax, xmm0
+	mov	rdx, QWORD PTR -72[rbp]
+	mov	QWORD PTR [rdx], rax
 	lea	rax, -48[rbp]
 	mov	rsi, rax
 	mov	edi, 1
@@ -402,8 +406,8 @@ main:
 	mov	eax, 0
 	call	getRandomDouble
 	movq	rax, xmm0
-	mov	QWORD PTR -72[rbp], rax
-	mov	rax, QWORD PTR -72[rbp]
+	mov	QWORD PTR -64[rbp], rax
+	mov	rax, QWORD PTR -64[rbp]
 	movq	xmm0, rax
 	lea	rdi, .LC3[rip]
 	mov	eax, 1
@@ -415,7 +419,7 @@ main:
 	jne	.L48
 	lea	rdi, .LC11[rip]
 	call	puts@PLT
-	lea	rdx, -72[rbp]
+	lea	rdx, -64[rbp]
 	mov	rax, QWORD PTR -8[rbp]
 	mov	rsi, rdx
 	mov	rdi, rax
@@ -423,7 +427,7 @@ main:
 	mov	DWORD PTR -44[rbp], eax
 	jmp	.L47
 .L48:
-	lea	rdx, -72[rbp]
+	lea	rdx, -64[rbp]
 	mov	rax, QWORD PTR -8[rbp]
 	mov	rsi, rdx
 	mov	rdi, rax
@@ -437,7 +441,7 @@ main:
 	mov	eax, 0
 	jmp	.L53
 .L49:
-	mov	rax, QWORD PTR -72[rbp]
+	mov	rax, QWORD PTR -64[rbp]
 	movq	xmm0, rax
 	call	validateNumber
 	mov	DWORD PTR -44[rbp], eax
@@ -448,11 +452,11 @@ main:
 	mov	eax, 0
 	jmp	.L53
 .L50:
-	mov	rax, QWORD PTR -72[rbp]
+	mov	rax, QWORD PTR -64[rbp]
 	movq	xmm0, rax
 	call	calculate
 	movq	rax, xmm0
-	mov	QWORD PTR -56[rbp], rax
+	mov	QWORD PTR -72[rbp], rax
 	cmp	DWORD PTR -24[rbp], 0
 	je	.L51
 	mov	rax, QWORD PTR -40[rbp]
@@ -460,19 +464,21 @@ main:
 	lea	rdi, .LC14[rip]
 	mov	eax, 0
 	call	printf@PLT
-	mov	rdx, QWORD PTR -72[rbp]
+	mov	rdx, QWORD PTR -64[rbp]
+	lea	rcx, -72[rbp]
 	mov	rax, QWORD PTR -40[rbp]
+	mov	rsi, rcx
 	movq	xmm0, rdx
 	mov	rdi, rax
 	call	measureTime
-	mov	QWORD PTR -64[rbp], rax
-	mov	rax, QWORD PTR -64[rbp]
+	mov	QWORD PTR -56[rbp], rax
+	mov	rax, QWORD PTR -56[rbp]
 	mov	rsi, rax
 	lea	rdi, .LC15[rip]
 	mov	eax, 0
 	call	printf@PLT
 .L51:
-	mov	rdx, QWORD PTR -56[rbp]
+	mov	rdx, QWORD PTR -72[rbp]
 	mov	rax, QWORD PTR -16[rbp]
 	movq	xmm0, rdx
 	mov	rdi, rax

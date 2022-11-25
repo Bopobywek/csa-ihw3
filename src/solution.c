@@ -71,14 +71,14 @@ int64_t getTimeDiff(struct timespec ts1, struct timespec ts2) {
     return ts1_ms - ts2_ms;
 }
 
-int64_t measureTime(int64_t sample_size, double number) {
+int64_t measureTime(int64_t sample_size, double number, double *result) {
     struct timespec start;
     struct timespec end;
     int64_t elapsed = 0;
 
     for (int64_t i = 0; i < sample_size; ++i) {
         clock_gettime(CLOCK_MONOTONIC, &start);
-        calculate(number);
+        *result = calculate(number);
         clock_gettime(CLOCK_MONOTONIC, &end);
         elapsed += getTimeDiff(end, start);
     }
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
 
     if (test_flag) {
         printf("Running current test case %ld times...\n", sample_size);
-        int64_t elapsed = measureTime(sample_size, number);
+        int64_t elapsed = measureTime(sample_size, number, &result);
         printf("Elapsed time: %ld ms\n", elapsed);
     }
 

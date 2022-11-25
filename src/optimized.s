@@ -1,4 +1,3 @@
-	.file	"solution.c"
 	.intel_syntax noprefix
 	.text
 	.globl	EPS
@@ -13,44 +12,41 @@ EPS:
 	.globl	calculate
 	.type	calculate, @function
 calculate:
-	endbr64                             # /
-	push	rbp                         # | Пролог функции
+	push	rbp                         # / Пролог функции
 	mov	rbp, rsp                        # |
 
-	movsd	QWORD PTR -40[rbp], xmm0    # | rbp[-40] := xmm0 = double x -- загружаем на стек первый аргумент, переданный через xmm0
+	movsd	xmm8, xmm0    # | rbp[-40] := xmm0 = double x -- загружаем на стек первый аргумент, переданный через xmm0
 	pxor	xmm0, xmm0                  # | Обнуляем xmm0
-	movsd	QWORD PTR -8[rbp], xmm0     # | result = rbp[-8] := xmm0 = 0
-	movsd	xmm0, QWORD PTR -40[rbp]    # | xmm0 := rbp[-40] = x
-	movsd	QWORD PTR -16[rbp], xmm0    # | component = rbp[-16] := xmm0 = x
-	mov	QWORD PTR -24[rbp], 2           # | i = rbp[-24] := 2
+	movsd	xmm9, xmm0     # | result = rbp[-8] := xmm0 = 0
+	movsd	xmm0, xmm8    # | xmm0 := rbp[-40] = x
+	movsd	xmm10, xmm0    # | component = rbp[-16] := xmm0 = x
+	mov	r11, 2           # | i = rbp[-24] := 2
 	jmp	.L2                             # | Переходим к проверке условия продолжения цикла (метка .L2)
 .L3:
-	movsd	xmm0, QWORD PTR -8[rbp]		# | xmm0 := rbp[-8] = result
-	addsd	xmm0, QWORD PTR -16[rbp]	# | xmm0 := xmm0 + rbp[-16] = xmm0 + component = result + component
-	movsd	QWORD PTR -8[rbp], xmm0		# | result = rbp[-8] := xmm0 = result + component
-	movsd	xmm0, QWORD PTR -16[rbp]	# | xmm0 := rbp[-16] = component
-	mulsd	xmm0, QWORD PTR -40[rbp]	# | xmm0 := xmm0 * rbp[-40] = component * x
-	movsd	QWORD PTR -16[rbp], xmm0	# | component = rbp[-16] := xmm0 = component * x
-	mov	rax, QWORD PTR -24[rbp]			# | rax := rbp[-24] = i
+	movsd	xmm0, xmm9		# | xmm0 := rbp[-8] = result
+	addsd	xmm0, xmm10	# | xmm0 := xmm0 + rbp[-16] = xmm0 + component = result + component
+	movsd	xmm9, xmm0		# | result = rbp[-8] := xmm0 = result + component
+	movsd	xmm0, xmm10	# | xmm0 := rbp[-16] = component
+	mulsd	xmm0, xmm8	# | xmm0 := xmm0 * rbp[-40] = component * x
+	movsd	xmm10, xmm0	# | component = rbp[-16] := xmm0 = component * x
+	mov	rax, r11		# | rax := rbp[-24] = i
 	sub	rax, 1							# | rax := rax - 1 = i - 1
 	cvtsi2sd	xmm0, rax				#  \ Конвертируем i - 1 (rax) в число с плавающей точкой двойной точности и кладем в xmm0
-	cvtsi2sd	xmm1, QWORD PTR -24[rbp]  # | Конвертируем i (rbp[-24]) в число с плавающей точкой двойной точности и кладем в xmm1
+	cvtsi2sd	xmm1, r11  # | Конвертируем i (rbp[-24]) в число с плавающей точкой двойной точности и кладем в xmm1
 	divsd	xmm0, xmm1					#  / xmm0 := xmm0 / xmm1 = (i-1) / i
-	movsd	xmm1, QWORD PTR -16[rbp]	# | xmm1 := rbp[-16] = component
-	mulsd	xmm0, xmm1					# | xmm0 := xmm0 * xmm1 = (i-1) / i * component
-	movsd	QWORD PTR -16[rbp], xmm0	# | component = rbp[-16] := xmm0 = (i-1) / i * component
-	add	QWORD PTR -24[rbp], 1			# | ++i
+	mulsd	xmm0, xmm10					# | xmm0 := xmm0 * xmm1 = (i-1) / i * component
+	movsd	xmm10, xmm0	# | component = rbp[-16] := xmm0 = (i-1) / i * component
+	add	r11, 1			# | ++i
 .L2:
 	movsd	xmm0, QWORD PTR EPS[rip]	# | xmm0 := rip[EPS] = EPS
 	movq	xmm1, QWORD PTR .LC1[rip]	# | xmm1 := rip[.LC1] -- маска, для получения отрицательного числ
 	xorpd	xmm0, xmm1					# | Накладывая маску на xmm0, получаем в старшем бите 1 => xmm0 := xmm0 ^ xmm1 = -EPS
-	comisd	xmm0, QWORD PTR -16[rbp]	# | Сравниваем -EPS (xmm0) и component (rbp[-16])
+	comisd	xmm0, xmm10	# | Сравниваем -EPS (xmm0) и component (rbp[-16])
 	ja	.L3								# | Если -EPS > component, переходим к телу цикла
 	movsd	xmm1, QWORD PTR EPS[rip]	# | xmm1 := rip[EPS] = EPS
-	movsd	xmm0, QWORD PTR -16[rbp]	# | xmm0 := rbp[-16] = component
-	comisd	xmm0, xmm1					# | Сравниваем component (xmm0) и EPS (xmm1)
+	comisd	xmm10, xmm1					# | Сравниваем component (xmm0) и EPS (xmm1)
 	ja	.L3								# | Если component > EPS, переходим к телу цикла
-	movsd	xmm0, QWORD PTR -8[rbp]		# | xmm0 := rbp[-8] = result
+	movsd	xmm0, xmm9		# | xmm0 := rbp[-8] = result
 	movq	xmm1, QWORD PTR .LC1[rip]	# | xmm1 := rip[.LC1] -- маска, для получения отрицательного числа
 	xorpd	xmm0, xmm1					# | Накладывая маску на xmm0, получаем в старшем бите 1 => xmm0 := xmm0 ^ xmm1 = -result
 										# | Результат возвращаем через xmm0
@@ -66,8 +62,7 @@ calculate:
 	.globl	readDouble
 	.type	readDouble, @function
 readDouble:
-	endbr64								# /
-	push	rbp							# |
+	push	rbp							# /
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 16							# |
 	
@@ -96,8 +91,7 @@ readDouble:
 	.globl	printDouble
 	.type	printDouble, @function
 printDouble:
-	endbr64								# /
-	push	rbp							# |
+	push	rbp							# /
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 16							# |
 	
@@ -124,8 +118,7 @@ printDouble:
 	.globl	validateNumber
 	.type	validateNumber, @function
 validateNumber:
-	endbr64								# /
-	push	rbp							# | Пролог функции
+	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
 	movsd	QWORD PTR -8[rbp], xmm0		# | rbp[-8] := xmm0 = double number -- загружаем на стек первый переданный аргумент
@@ -148,8 +141,7 @@ validateNumber:
 	.globl	max
 	.type	max, @function
 max:
-	endbr64								# /
-	push	rbp							# | Пролог функции
+	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
 	mov	DWORD PTR -4[rbp], edi			# | rbp[-4] := edi = a -- загружаем на стек первый переданный аргумент
@@ -169,8 +161,7 @@ max:
 	.globl	min
 	.type	min, @function
 min:
-	endbr64								# /
-	push	rbp							# | Пролог функции
+	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
 	movsd	QWORD PTR -8[rbp], xmm0		# | rbp[-8] := xmm0 = a -- загружаем на стек первый переданный аргумент
@@ -192,8 +183,7 @@ min:
 	.globl	getRandomDouble
 	.type	getRandomDouble, @function
 getRandomDouble:
-	endbr64								# /
-	push	rbp							# |
+	push	rbp							# /
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 16							# |
 	
@@ -223,8 +213,7 @@ getRandomDouble:
 	.globl	getTimeDiff
 	.type	getTimeDiff, @function
 getTimeDiff:
-	endbr64								# /
-	push	rbp							# | Пролог функции
+	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
 	mov	rax, rsi						# | rax := rsi = ts1.tv_nsec
@@ -274,14 +263,12 @@ getTimeDiff:
 	.globl	measureTime
 	.type	measureTime, @function
 measureTime:
-	endbr64								# /
-	push	rbp							# |
+	push	rbp							# /
 	mov	rbp, rsp						# | Пролог функции
-	sub	rsp, 80							# |
+	sub	rsp, 64							# |
 	
 	mov	QWORD PTR -56[rbp], rdi			# | rbp[-56] := rdi = int64_t sample_size -- загружаем на стек первый переданный аргумент
-	movsd	QWORD PTR -64[rbp], xmm0	# | rbp[-64] := xmm0 = double number -- загружаем на стек второй переданный аргумент
-	mov QWORD PTR -72[rbp], rsi			# | rbp[-72] := rsi = double *result -- загружаем на стек третий аргумент 
+	movsd	xmm11, xmm0	# | rbp[-64] := xmm0 = double number -- загружаем на стек второй переданный аргумент
 	mov	QWORD PTR -8[rbp], 0			# | elapsed = rbp[-8] := 0
 	mov	QWORD PTR -16[rbp], 0			# | i = rbp[-16] := 0
 	jmp	.L33							# | Переходим к проверке условия продолжения цикла
@@ -289,14 +276,10 @@ measureTime:
 	lea	rax, -32[rbp]					# | rax := &rbp[-32] = &start
 	mov	rsi, rax						# | rsi := rax = &start -- второй аргумент для функции
 	mov	edi, 1							# | edi := 1 = CLOCK_MONOTONIC -- первый аргумент для функции
-	call	clock_gettime@PLT			# | Вызываем clock_gettime(edi=1, rsi=&start) 
-	mov	rax, QWORD PTR -64[rbp]			# | rax := rbp[-64] = number
-	movq	xmm0, rax					# | xmm0 := rax = number -- первый аргумент (double) для передачи в функции
+	call	clock_gettime@PLT			# | Вызываем clock_gettime(edi=1, rsi=&start)
+	movsd	xmm0, xmm11					# | xmm0 := rax = number -- первый аргумент (double) для передачи в функции
 	call	calculate					# | Вызываем calculate(xmm0=number)
 										# | Функция вернула значение через xmm0
-	movq rax, xmm0						# | rax := xmm0
-	mov rdx, QWORD PTR -72[rbp]			# | rdx := rbp[-72] = result
-	mov QWORD PTR [rdx], rax			# | *result = [rdx] := rax
 	lea	rax, -48[rbp]					# | rax := &rbp[-48] = &end
 	mov	rsi, rax						# | rsi := rax = &end -- передаем второй аргумент
 	mov	edi, 1							# | edi := 1 = CLOCK_MONOTONIC
@@ -348,7 +331,6 @@ measureTime:
 	.globl	main
 	.type	main, @function
 main:
-	endbr64								# /
 	push	rbp							# |
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 96							# |
@@ -447,8 +429,8 @@ main:
 	call	getRandomDouble				# | Вызываем getRandomDouble()
 										# | Функция вернула значение через xmm0
 	movq	rax, xmm0					# | rax := xmm0
-	mov	QWORD PTR -64[rbp], rax			# | number = rbp[-64] := rax = getRandomDouble()
-	mov	rax, QWORD PTR -64[rbp]			# | rax := rbp[-64] = number
+	mov	QWORD PTR -72[rbp], rax			# | number = rbp[-72] := rax = getRandomDouble()
+	mov	rax, QWORD PTR -72[rbp]			# | rax := rbp[-72] = number
 	movq	xmm0, rax					# | xmm0 := rax = number
 	lea	rdi, .LC3[rip]					# | rdi := &rip[.LC3] -- адрес на начало форматной строки (первый аргумент)
 	mov	eax, 1							# | eax := 1
@@ -460,7 +442,7 @@ main:
 	jne	.L48							# | Если input != stdin, переходим к else
 	lea	rdi, .LC11[rip]					# | rdi := &rip[.LC11] -- первый аргумент, адрес на начало строки
 	call	puts@PLT					# | Вызываем puts(rdi=&rip[.LC11])
-	lea	rdx, -64[rbp]					# | rdx := &rbp[-64] = rbp - 64 = &number
+	lea	rdx, -72[rbp]					# | rdx := &rbp[-72] = rbp - 72 = &number
 	mov	rax, QWORD PTR -8[rbp]			# | rax := rbp[-8] = input
 	mov	rsi, rdx						# | rsi := rdx = &number -- второй аргумент для вызова функции
 	mov	rdi, rax						# | rdi := rax = input -- первый аргумент
@@ -469,7 +451,7 @@ main:
 	mov	DWORD PTR -44[rbp], eax			# | status_code = rbp[-44] := eax = readDouble(input, &number)
 	jmp	.L47							# | Переходим на метку .L47
 .L48:
-	lea	rdx, -64[rbp]					# | rdx := &rbp[-64] = rbp - 64 = &number
+	lea	rdx, -72[rbp]					# | rdx := &rbp[-72] = rbp - 72 = &number
 	mov	rax, QWORD PTR -8[rbp]			# | rax := rbp[-8] = input
 	mov	rsi, rdx						# | rsi := rdx = &number -- второй аргумент для вызова функции
 	mov	rdi, rax						# | rdi := rax = input -- первый аргумент
@@ -484,7 +466,7 @@ main:
 	mov	eax, 0							# | Возвращаем 0 через eax
 	jmp	.L53							# | Переходим к эпилогу
 .L49:
-	mov	rax, QWORD PTR -64[rbp]			# | rax := rbp[-64] = number
+	mov	rax, QWORD PTR -72[rbp]			# | rax := rbp[-72] = number
 	movq	xmm0, rax					# | xmm0 := rax = number -- первый аргумент
 	call	validateNumber				# | Вызываем validateNumber(xmm0=number)
 										# | Функция возвращает значение через eax
@@ -496,12 +478,12 @@ main:
 	mov	eax, 0							# | Возвращаем 0 через eax
 	jmp	.L53							# | И переходим к эпилогу
 .L50:							
-	mov	rax, QWORD PTR -64[rbp]			# | rax := rbp[-64] = number
+	mov	rax, QWORD PTR -72[rbp]			# | rax := rbp[-72] = number
 	movq	xmm0, rax					# | xmm0 := rax = number -- первый аргумент для вызова функции
 	call	calculate					# | Вызываем calculate(xmm0=number)
 										# | Функция вернула значение через xmm0
 	movq	rax, xmm0					# | rax := xmm0
-	mov	QWORD PTR -72[rbp], rax			# | result = rbp[-72] := rax
+	mov	QWORD PTR -56[rbp], rax			# | result = rbp[-56] := rax
 	cmp	DWORD PTR -24[rbp], 0			# | Сравниваем test_flag (rbp[-24]) и 0
 	je	.L51							# | Если test_flag == 0, переходим на метку .L51
 	mov	rax, QWORD PTR -40[rbp]			# | rax := rbp[-40] = sample_size
@@ -509,22 +491,20 @@ main:
 	lea	rdi, .LC14[rip]					# | rdi := &rip[.LC14] -- адрес на начало строки для вывода (первый аргумент)
 	mov	eax, 0							# | eax := 0
 	call	printf@PLT					# | Вызываем printf(rdi=&rip[.LC14], rsi=sample_size)
-	mov	rdx, QWORD PTR -64[rbp]			# | rdx := rbp[-64] = number
-	lea rcx, -72[rbp]					# | rcx := &rbp[-72] = &result
+	mov	rdx, QWORD PTR -72[rbp]			# | rdx := rbp[-72] = number
 	mov	rax, QWORD PTR -40[rbp]			# | rax := rbp[-40] = sample_size
-	mov rsi, rcx						# | rsi := rcx = &result -- третий аргумент 
 	movq	xmm0, rdx					# | xmm0 := rdx = number -- второй аргумент
 	mov	rdi, rax						# | rdi := rax = sample_size -- первый аргумент
-	call	measureTime					# | Вызываем measureTime(rdi=sample_size, xmm0=number, rsi=&result)
+	call	measureTime					# | Вызываем measureTime(rdi=sample_size, xmm0=number)
 										# | Функция вернула значение через rax
-	mov	QWORD PTR -56[rbp], rax			# | elapsed = rbp[-56] := rax
-	mov	rax, QWORD PTR -56[rbp]			# | rax := rbp[-56] = elapsed
+	mov	QWORD PTR -64[rbp], rax			# | elapsed = rbp[-64] := rax
+	mov	rax, QWORD PTR -64[rbp]			# | rax := rbp[-64] = elapsed
 	mov	rsi, rax						# | rsi := rax = elapsed -- второй аргумент для printf
 	lea	rdi, .LC15[rip]					# | rdi := &rip[.LC15] -- адрес начала форматной строки (первый аргумент)
 	mov	eax, 0							# | eax := 0
 	call	printf@PLT					# | Вызываем printf(rdi=&rip[.LC15], rsi=elapsed)
 .L51:			
-	mov	rdx, QWORD PTR -72[rbp]			# | rdx := rbp[-72] = result
+	mov	rdx, QWORD PTR -56[rbp]			# | rdx := rbp[-56] = result
 	mov	rax, QWORD PTR -16[rbp]			# | rax := rbp[-16] = output
 	movq	xmm0, rdx					# | xmm0 := rdx = result -- второй аргумент
 	mov	rdi, rax						# | rdi := rax = output -- первый аргумент
@@ -565,21 +545,3 @@ main:
 .LC7:
 	.long	0
 	.long	1072693248
-	.ident	"GCC: (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0"
-	.section	.note.GNU-stack,"",@progbits
-	.section	.note.gnu.property,"a"
-	.align 8
-	.long	 1f - 0f
-	.long	 4f - 1f
-	.long	 5
-0:
-	.string	 "GNU"
-1:
-	.align 8
-	.long	 0xc0000002
-	.long	 3f - 2f
-2:
-	.long	 0x3
-3:
-	.align 8
-4:
