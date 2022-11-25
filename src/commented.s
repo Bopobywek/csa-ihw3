@@ -72,7 +72,7 @@ readDouble:
 	sub	rsp, 16							# |
 	
 	mov	QWORD PTR -8[rbp], rdi			# | rbp[-8] := rdi = FILE *stream -- загружаем на стек первый переданный параметр через rdi
-	mov	QWORD PTR -16[rbp], rsi			# | rbp[-16] := rsi = double *result -- загружаем на стек первый переданный параметр через rdi
+	mov	QWORD PTR -16[rbp], rsi			# | rbp[-16] := rsi = double *result -- загружаем на стек второй переданный параметр через rsi
 	cmp	QWORD PTR -8[rbp], 0			# | Сравниваем stream (rbp[-8]) и NULL (0)
 	jne	.L6								# | Если stream != NULL, переходим на метку .L6
 	mov	eax, 1							# | Иначе возвращаем 1 через eax
@@ -114,7 +114,7 @@ printDouble:
 	lea	rsi, .LC3[rip]					# | rsi := &rip[.LC3]
 	mov	rdi, rax						# | rdi := rax = stream
 	mov	eax, 1							# | eax := 1
-	call	fprintf@PLT					# | 
+	call	fprintf@PLT					# | Вызываем fprintf(rdi=stream, rsi=&rip[.LC3], xmm0=number)
 	mov	eax, 0							# | Возвращаем 0 через eax
 .L10:
 	leave								# | Эпилог функции
