@@ -15,31 +15,31 @@ calculate:
 	push	rbp                         # / Пролог функции
 	mov	rbp, rsp                        # |
 
-	movsd	xmm8, xmm0    # | rbp[-40] := xmm0 = double x -- загружаем на стек первый аргумент, переданный через xmm0
-	pxor	xmm9, xmm9     # | result = rbp[-8] := xmm0 = 0
-	movsd	xmm10, xmm8    # | component = rbp[-16] := xmm0 = x
-	mov	r11, 2           # | i = rbp[-24] := 2
+	movsd	xmm8, xmm0    				# | xmm8 := xmm0 = double x -- загружаем в регистр первый аргумент, переданный через xmm0
+	pxor	xmm9, xmm9     				# | В xmm9 будем хранить result. Обнуляем его
+	movsd	xmm10, xmm8    				# | component = xmm10 := xmm8 = x
+	mov	r11, 2           				# | i = r11 := 2
 	jmp	.L2                             # | Переходим к проверке условия продолжения цикла (метка .L2)
 .L3:
-	addsd	xmm9, xmm10		# | result = rbp[-8] := xmm0 = result + component
-	mulsd	xmm10, xmm8	# | xmm0 := xmm0 * rbp[-40] = component * x
-	mov	rax, r11			# | rax := rbp[-24] = i
+	addsd	xmm9, xmm10					# | result = xmm9 := xmm9 + xmm10 = result + component
+	mulsd	xmm10, xmm8					# | xmm10 := xmm10 * xmm8 = component * x
+	mov	rax, r11						# | rax := r11 = i
 	sub	rax, 1							# | rax := rax - 1 = i - 1
-	cvtsi2sd	xmm0, rax				#  \ Конвертируем i - 1 (rax) в число с плавающей точкой двойной точности и кладем в xmm0
-	cvtsi2sd	xmm1, r11  # | Конвертируем i (rbp[-24]) в число с плавающей точкой двойной точности и кладем в xmm1
-	divsd	xmm0, xmm1					#  / xmm0 := xmm0 / xmm1 = (i-1) / i
-	mulsd	xmm10, xmm0	# | component = rbp[-16] := xmm0 = (i-1) / i * component
-	add	r11, 1			# | ++i
+	cvtsi2sd	xmm0, rax				# | Конвертируем i - 1 (rax) в число с плавающей точкой двойной точности и кладем в xmm0
+	cvtsi2sd	xmm1, r11  				# | Конвертируем i (r11) в число с плавающей точкой двойной точности и кладем в xmm1
+	divsd	xmm0, xmm1					# | xmm0 := xmm0 / xmm1 = (i-1) / i
+	mulsd	xmm10, xmm0					# | component = xmm10 := xmm10 * xmm0 = component * (i-1) / i
+	add	r11, 1							# | ++i
 .L2:
 	movsd	xmm0, QWORD PTR EPS[rip]	# | xmm0 := rip[EPS] = EPS
 	movq	xmm1, QWORD PTR .LC1[rip]	# | xmm1 := rip[.LC1] -- маска, для получения отрицательного числ
 	xorpd	xmm0, xmm1					# | Накладывая маску на xmm0, получаем в старшем бите 1 => xmm0 := xmm0 ^ xmm1 = -EPS
-	comisd	xmm0, xmm10	# | Сравниваем -EPS (xmm0) и component (rbp[-16])
+	comisd	xmm0, xmm10					# | Сравниваем -EPS (xmm0) и component (xmm10)
 	ja	.L3								# | Если -EPS > component, переходим к телу цикла
 	movsd	xmm1, QWORD PTR EPS[rip]	# | xmm1 := rip[EPS] = EPS
-	comisd	xmm10, xmm1					# | Сравниваем component (xmm0) и EPS (xmm1)
+	comisd	xmm10, xmm1					# | Сравниваем component (xmm10) и EPS (xmm1)
 	ja	.L3								# | Если component > EPS, переходим к телу цикла
-	movsd	xmm0, xmm9	# | xmm0 := rbp[-8] = result
+	movsd	xmm0, xmm9					# | xmm0 := xmm9 = result
 	movq	xmm1, QWORD PTR .LC1[rip]	# | xmm1 := rip[.LC1] -- маска, для получения отрицательного числа
 	xorpd	xmm0, xmm1					# | Накладывая маску на xmm0, получаем в старшем бите 1 => xmm0 := xmm0 ^ xmm1 = -result
 										# | Результат возвращаем через xmm0
@@ -47,6 +47,10 @@ calculate:
 	pop	rbp								# | Эпилог функции
 	ret									# \
 	.size	calculate, .-calculate
+
+# ^
+# Удалось полностью заменить хранение локальных переменных на стеке хранением локальных переменных в регистрах
+# Для чисел типа double использовались регистры xmm8, xmm9 и xmm10. Для целого числа i был использован регистр r11
 
 	.section	.rodata
 .LC2:
@@ -59,17 +63,16 @@ readDouble:
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 16							# |
 	
-	mov	QWORD PTR -8[rbp], rdi			# | rbp[-8] := rdi = FILE *stream -- загружаем на стек первый переданный параметр через rdi
-	mov	QWORD PTR -16[rbp], rsi			# | rbp[-16] := rsi = double *result -- загружаем на стек первый переданный параметр через rdi
-	cmp	QWORD PTR -8[rbp], 0			# | Сравниваем stream (rbp[-8]) и NULL (0)
+	mov	r12, rdi						# | r12 := rdi = FILE *stream -- загружаем в регистр первый переданный параметр через rdi
+	mov	r13, rsi						# | r13 := rsi = double *result -- загружаем в регистр второй переданный параметр через rsi
+	cmp	r12, 0							# | Сравниваем stream (r12) и NULL (0)
 	jne	.L6								# | Если stream != NULL, переходим на метку .L6
 	mov	eax, 1							# | Иначе возвращаем 1 через eax
 	jmp	.L7								# | и переходим к эпилогу
 .L6:
-	mov	rdx, QWORD PTR -16[rbp]			# | rdx := rbp[-16] = result -- третий аргумент для вызова fscanf
-	mov	rax, QWORD PTR -8[rbp]			# | rax := rbp[-8] = stream
+	mov	rdx, r13						# | rdx := r13 = result -- третий аргумент для вызова fscanf
 	lea	rsi, .LC2[rip]					# | rsi := &rip[.LC2] -- второй аргумент (форматная строка) для вызова 
-	mov	rdi, rax						# | rdi := rax = stream -- первый аргумент для вызова
+	mov	rdi, r12						# | rdi := r12 = stream -- первый аргумент для вызова
 	mov	eax, 0							# | eax := 0 
 	call	__isoc99_fscanf@PLT			# | Вызываем fscanf(rdi=stream, rsi=&rip[.LC2], rdx=result)
 	mov	eax, 0							# | Возвращаем 0 через eax
@@ -77,6 +80,9 @@ readDouble:
 	leave								# | Эпилог функции
 	ret									# \
 	.size	readDouble, .-readDouble
+# ^
+# Использование стека было заменено на следующие регистры: r12, r13
+
 	.section	.rodata
 .LC3:
 	.string	"%lf\n"
@@ -88,39 +94,39 @@ printDouble:
 	mov	rbp, rsp						# | Пролог функции
 	sub	rsp, 16							# |
 	
-	mov	QWORD PTR -8[rbp], rdi			# | rbp[-8] := rdi = FILE *stream -- загружаем на стек первый аргумент, переданный через rdi
-	movsd	QWORD PTR -16[rbp], xmm0	# | rbp[-16] := xmm0 = double number -- загружаем на стек второй переданный аргумент
-	cmp	QWORD PTR -8[rbp], 0			# | Сравниваем stream (rbp[-8]) и NULL (0)
+	mov	r12, rdi						# | r12 := rdi = FILE *stream -- загружаем в регистр первый аргумент, переданный через rdi
+										# | Также через xmm0 был передан второй аргумент: double number
+	cmp	r12, 0							# | Сравниваем stream (r12) и NULL (0)
 	jne	.L9								# | Если stream != NULL, переходим на метку .L9
 	mov	eax, 1							# | Иначе возвращаем 1 через eax
 	jmp	.L10							# | и переходим к эпилогу функции
 .L9:
-	mov	rdx, QWORD PTR -16[rbp]			# | rdx := rbp[-16] = number
-	mov	rax, QWORD PTR -8[rbp]			# | rax := rbp[-8] = stream
-	movq	xmm0, rdx					# | xmm0 := rdx = number
 	lea	rsi, .LC3[rip]					# | rsi := &rip[.LC3]
-	mov	rdi, rax						# | rdi := rax = stream
+	mov	rdi, r12						# | rdi := r12 = stream
 	mov	eax, 1							# | eax := 1
-	call	fprintf@PLT					# | 
+										# | xmm0 не меняли, поэтому он так и передается
+	call	fprintf@PLT					# | Вызываем fprintf(rdi=stream, rsi=&rip[.LC3], xmm0=number)
 	mov	eax, 0							# | Возвращаем 0 через eax
 .L10:
 	leave								# | Эпилог функции
 	ret									# \
 	.size	printDouble, .-printDouble
-	
+# ^
+# Использование стека было заменено на регистр r12. 
+# Также было исключено лишнее сохранение на стек значения входного параметра double number
+
 	.globl	validateNumber
 	.type	validateNumber, @function
 validateNumber:
 	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
-	movsd	QWORD PTR -8[rbp], xmm0		# | rbp[-8] := xmm0 = double number -- загружаем на стек первый переданный аргумент
+	movsd	xmm8, xmm0					# | xmm8 := xmm0 = double number -- загружаем в регистр первый переданный аргумент
 	movsd	xmm0, QWORD PTR .LC4[rip]	# | xmm0 := rip[.LC4] = 0.999
-	comisd	xmm0, QWORD PTR -8[rbp]		# | Сравниваем 0.999 (xmm0) и number (rbp[-8])
+	comisd	xmm0, xmm8					# | Сравниваем 0.999 (xmm0) и number (xmm8)
 	jb	.L12							# | Если 0.999 < number, выражение ложно, переходим к возврату 0 на метку .L12
-	movsd	xmm0, QWORD PTR -8[rbp]		# | xmm0 := rbp[-8] = number
 	movsd	xmm1, QWORD PTR .LC5[rip]	# | xmm1 := rip[.LC5] = -1.0
-	comisd	xmm0, xmm1					# | Сравниваем number (xmm0) и -1.0 (xmm1)
+	comisd	xmm8, xmm1					# | Сравниваем number (xmm8) и -1.0 (xmm1)
 	jb	.L12							# | Если number < -1.0, выражение ложно, переходим к возврату 0 на метку .L12
 	mov	eax, 1							# | Иначе возвращаем 1 через eax
 	jmp	.L16							# | и переходим к эпилогу
@@ -130,48 +136,48 @@ validateNumber:
 	pop	rbp								# | Пролог функции 
 	ret									# \
 	.size	validateNumber, .-validateNumber
+# ^
+# Теперь храним number не на стеке, а в регистре xmm8
 	
 	.globl	max
 	.type	max, @function
 max:
 	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
-	
-	mov	DWORD PTR -4[rbp], edi			# | rbp[-4] := edi = a -- загружаем на стек первый переданный аргумент
-	mov	DWORD PTR -8[rbp], esi			# | rbp[-8] := esi = b -- загружаем на стек второй переданный аргумент
-	mov	eax, DWORD PTR -4[rbp]			# | eax := rbp[-4] = a
-	cmp	eax, DWORD PTR -8[rbp]			# | Сравниваем a (eax) и b (rbp[-8])
+										
+										# | Через edi и esi получаем переданные аргументы a и b соответственно
+	cmp	edi, esi						# | Сравниваем a (edi) и b (esi)
 	jle	.L20							# | Если a <= b, возвращаем b через eax
-	mov	eax, DWORD PTR -4[rbp]			# | Иначе возвращаем a: eax := rbp[-4] = a
+	mov	eax, edi						# | Иначе возвращаем a: eax := edi = a
 	jmp	.L21							# | и переходим к эпилогу
 .L20:
-	mov	eax, DWORD PTR -8[rbp]			# | eax := rbp[-8] = b
+	mov	eax, esi						# | eax := esi = b
 .L21:
 	pop	rbp								# | Эпилог функции
 	ret									# \
 	.size	max, .-max
-	
+# ^
+# Использование стека полностью заменено на использование регистров esi и edi
+
 	.globl	min
 	.type	min, @function
 min:
 	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
-	
-	movsd	QWORD PTR -8[rbp], xmm0		# | rbp[-8] := xmm0 = a -- загружаем на стек первый переданный аргумент
-	movsd	QWORD PTR -16[rbp], xmm1	# | rbp[-16] := xmm1 = b -- загружаем на стек второй переданный аргумент
-	movsd	xmm0, QWORD PTR -8[rbp]		# | xmm0 := rbp[-8] = a
-	comisd	xmm0, QWORD PTR -16[rbp]	# | Сравниваем a (rbp[-8]) и b (rbp[-16])
-	jbe	.L27							# | Если a <= b, возвращаем a через xmm0
-	movsd	xmm0, QWORD PTR -16[rbp]	# | xmm0 := rbp[-16] = b // Иначе возвращаем b
+										
+										# | Через xmm0 и xmm1 получаем переданные аргументы a и b соответственно
+	comisd	xmm0, xmm1					# | Сравниваем a (xmm0) и b (xmm1)
+	jbe	.L25							# | Если a <= b, возвращаем a через xmm0
+	movsd	xmm0, xmm1					# | xmm0 := xmm1 = b // Иначе возвращаем b
 	jmp	.L25							# | Переходим к эпилогу
-.L27:
-	movsd	xmm0, QWORD PTR -8[rbp]		# | xmm0 := rbp[-8] = a
 .L25:
 										# | Результат возвращается через xmm0
 										
 	pop	rbp								# | Эпилог функции
 	ret									# \
 	.size	min, .-min
+# ^
+# Использование стека полностью заменено на использование регистров xmm0 и xmm1
 	
 	.globl	getRandomDouble
 	.type	getRandomDouble, @function
@@ -187,8 +193,8 @@ getRandomDouble:
 	call	max							# | Вызываем max(edi=rand(), esi=1)
 										# | Функция вернула значение через eax
 	sub	eax, 1							# | eax := eax - 1 = max(rand(), 1) - 1
-	mov	DWORD PTR -4[rbp], eax			# | random = rbp[-4] := eax = max(rand(), 1) - 1
-	cvtsi2sd	xmm0, DWORD PTR -4[rbp] # | Конвертируем random (rbp[-4]) в число с плавающей точкой двойной точности и кладем в xmm0
+	mov	ebx, eax						# | random = ebx := eax = max(rand(), 1) - 1
+	cvtsi2sd	xmm0, ebx 				# | Конвертируем random (ebx) в число с плавающей точкой двойной точности и кладем в xmm0
 	movsd	xmm1, QWORD PTR .LC6[rip]	# | xmm1 := rip[.LC6] = (double)RAND_MAX
 	divsd	xmm0, xmm1					# | xmm0 := xmm0 / xmm1 = random / RAND_MAX
 	addsd	xmm0, xmm0					# | xmm0 := xmm0 + xmm0 <=> xmm0 * 2 = random / RAND_MAX * 2
@@ -202,6 +208,8 @@ getRandomDouble:
 	leave								# | Эпилог функции
 	ret									# \
 	.size	getRandomDouble, .-getRandomDouble
+# ^ 
+# Хранение в стеке заменено на хранение в регистре ebx
 	
 	.globl	getTimeDiff
 	.type	getTimeDiff, @function
@@ -209,21 +217,15 @@ getTimeDiff:
 	push	rbp							# / Пролог функции
 	mov	rbp, rsp						# |
 	
-	mov	rax, rsi						# | rax := rsi = ts1.tv_nsec
-	mov	r8, rdi							# | r8 := rdi = ts1.tv_sec	 
-	mov	rsi, r8							# | rsi := r8 = ts1.tv_sec
-	mov	rdi, r9							# | rdi := r9
-	mov	rdi, rax						# | rdi := rax = ts1.tv_nsec
-	
-	mov	QWORD PTR -32[rbp], rsi			# | rbp[-32] := rsi = ts1.tv_sec
-	mov	QWORD PTR -24[rbp], rdi			# | rbp[-24] := rsi = ts1.tv_nsec
+	mov	QWORD PTR -32[rbp], rdi			# | rbp[-32] := rsi = ts1.tv_sec
+	mov	QWORD PTR -24[rbp], rsi			# | rbp[-24] := rsi = ts1.tv_nsec
 	mov	QWORD PTR -48[rbp], rdx			# | rbp[-48] := rdx = ts2.tv_sec
 	mov	QWORD PTR -40[rbp], rcx			# | rbp[-40] := rdx = ts2.tv_nsec
 	
 	mov	rax, QWORD PTR -32[rbp]			# | rax := rbp[-32] = ts1.tv_sec
 	imul	rsi, rax, 1000				# | rsi := rax * 1000 = ts1.tv_sec * 1000
 	mov	rcx, QWORD PTR -24[rbp]			# | rcx := rbp[-24] = ts1.tv_nsec
-	movabs	rdx, 4835703278458516699 	# | /
+	movabs	rdx, 4835703278458516699 	# |  /
 	mov	rax, rcx						# |  |
 	imul	rdx							# |  |
 	sar	rdx, 18							# |  | Какая-то сложная (и наверняка оптимальная по скорости) арифметика
@@ -261,25 +263,20 @@ measureTime:
 	sub	rsp, 80							# |
 	
 	mov	QWORD PTR -56[rbp], rdi			# | rbp[-56] := rdi = int64_t sample_size -- загружаем на стек первый переданный аргумент
-	movsd	QWORD PTR -64[rbp], xmm0	# | rbp[-64] := xmm0 = double number -- загружаем на стек второй переданный аргумент
-	mov QWORD PTR -72[rbp], rsi			# | rbp[-72] := rsi = double *result -- загружаем на стек третий аргумент 
-	mov	QWORD PTR -8[rbp], 0			# | elapsed = rbp[-8] := 0
-	mov	QWORD PTR -16[rbp], 0			# | i = rbp[-16] := 0
+	movq r13, xmm0						# | r13 := xmm0 = double number -- загружаем в регистр второй переданный аргумент
+	mov r12, rsi						# | r12 := rsi = double *result -- загружаем в регистр третий аргумент 
+	mov	r15, 0							# | elapsed = r15 := 0
+	mov	r14, 0							# | i = r14 := 0
 	jmp	.L33							# | Переходим к проверке условия продолжения цикла
 .L34:
-	lea	rax, -32[rbp]					# | rax := &rbp[-32] = &start
-	mov	rsi, rax						# | rsi := rax = &start -- второй аргумент для функции
+	lea	rsi, -32[rbp]					# | rsi := &rbp[-32] = &start -- второй аргумент для функции
 	mov	edi, 1							# | edi := 1 = CLOCK_MONOTONIC -- первый аргумент для функции
-	call	clock_gettime@PLT			# | Вызываем clock_gettime(edi=1, rsi=&start) 
-	mov	rax, QWORD PTR -64[rbp]			# | rax := rbp[-64] = number
-	movq	xmm0, rax					# | xmm0 := rax = number -- первый аргумент (double) для передачи в функции
+	call	clock_gettime@PLT			# | Вызываем clock_gettime(edi=1, rsi=&start)
+	movq	xmm0, r13					# | xmm0 := r13 = number -- первый аргумент (double) для передачи в функции
 	call	calculate					# | Вызываем calculate(xmm0=number)
 										# | Функция вернула значение через xmm0
-	movq rax, xmm0						# | rax := xmm0
-	mov rdx, QWORD PTR -72[rbp]			# | rdx := rbp[-72] = result
-	mov QWORD PTR [rdx], rax			# | *result = [rdx] := rax
-	lea	rax, -48[rbp]					# | rax := &rbp[-48] = &end
-	mov	rsi, rax						# | rsi := rax = &end -- передаем второй аргумент
+	movq QWORD PTR [r12], xmm0			# | *result = [r12] := xmm0
+	lea	rsi, -48[rbp]					# | rsi := &rbp[-48] = &end -- передаем второй аргумент
 	mov	edi, 1							# | edi := 1 = CLOCK_MONOTONIC
 	call	clock_gettime@PLT			# | Вызываем clock_gettime(edi=1, rsi=&end)
 	mov	rax, QWORD PTR -32[rbp]			# | rax := rbp[-32] = start.tv_sec
@@ -290,17 +287,19 @@ measureTime:
 	mov	rdx, rax						# | rdx := rax = start.tv_sec
 	call	getTimeDiff					# | Вызываем getTimeDiff(rdi=end.tv_sec, rsi=end.tv_nsec, rdx=start.tv_sec, rcx=start.tv_nsec)
 										# | Функция вернула значение через rax
-	add	QWORD PTR -8[rbp], rax			# | elapsed = rbp[-8] := rbp[-8] + rax = elapsed + getTimeDiff(end, start)
-	add	QWORD PTR -16[rbp], 1			# | ++i
+	add	r15, rax						# | elapsed = r15 := r15 + rax = elapsed + getTimeDiff(end, start)
+	add	r14, 1							# | ++i
 .L33:
-	mov	rax, QWORD PTR -16[rbp]			# |	rax := rbp[-16] = i
-	cmp	rax, QWORD PTR -56[rbp]			# | Сравниваем i (rax) и sample_size (rbp[-56])
+	cmp	r14, QWORD PTR -56[rbp]			# | Сравниваем i (r14) и sample_size (rbp[-56])
 	jl	.L34							# | Если i < sample_size, переходим к телу цикла
-	mov	rax, QWORD PTR -8[rbp]			# | Иначе возвращаем из функции значение elapsed (rbp[-8]) через rax
+	mov	rax, r15						# | Иначе возвращаем из функции значение elapsed (r15) через rax
 	
 	leave								# | Эпилог функции
 	ret									# \
 	.size	measureTime, .-measureTime
+# ^
+# Вместо хранения на стеке используется хранение в регистрах r12, r13, r14, r15 
+
 	.section	.rodata
 .LC8:
 	.string	"r"
