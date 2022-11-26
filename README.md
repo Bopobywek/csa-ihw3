@@ -336,16 +336,20 @@ grep -v -e '^[[:space:]]*$' -e '^\s*#' PATH_TO_CODE > log_count
 wc -l log_count
 ```
 
-Кроме того, будем считать минимальное и максимальное время исполнения по 5 запускам `<executable> -r -t 3000000`
+Кроме того, будем считать минимальное и максимальное время исполнения по 5 запускам 
+```console
+<executable> -r -t 3000000
+```
 ### Сравнительный анализ по скорости и размеру 
 `-O1`, `-O2`, `-O3` &mdash; опции для оптимизации по скорости, а `Os` &mdash; по размеру. Объединим полученные данные в одну табличку:
-Программа | Используемые опции | Размер ассемблерного кода (в строках) | Размер исполняемого файла (в байтах) | Минимальное время исполнения (t = 100), в миллисекундах | Максимальное время исполнения (t = 100), в миллисекундах
+Программа | Используемые опции | Размер ассемблерного кода (в строках) | Размер исполняемого файла (в байтах) | Минимальное время исполнения, в миллисекундах | Максимальное время исполнения, в миллисекундах
 :---:|:---:|:---:|:---:|:---:|:---:
-[src/no_optimization/solution.s](src/no_optimization/solution.s) | &mdash; | 1070 | 18056 | 8497 | 8943 
- [src/O3_optimization/solution.s](src/O3_optimization/solution.s)  | -O3 | 1546 | 22296 | 3815 | 4663 
- [src/O2_optimization/solution.s](src/O2_optimization/solution.s)  | -O2 | 1140 | 18256 | 3820 | 4022
- [src/O1_optimization/solution.s](src/O1_optimization/solution.s)  | -O1 | 990 | 18096 | 3764 | 4207
- [src/Os_optimization/solution.s](src/Os_optimization/solution.s)  | -Os | 903 | 18096 | 4286 | 4790
-[src/optimized.s](src/optimized.s)  | &mdash; | 867 | 17768 | 7361 | 7669 
+[src/no_optimization/solution.s](src/no_optimization/solution.s) | &mdash; | 649 | 17640 | 11805 | 12009 
+ [src/O3_optimization/solution.s](src/O3_optimization/solution.s)  | -O3 | 653 | 17672  | 6781 | 7048  
+ [src/O2_optimization/solution.s](src/O2_optimization/solution.s)  | -O2 | 653 | 17672  | 6947 | 7131
+ [src/O1_optimization/solution.s](src/O1_optimization/solution.s)  | -O1 | 560 | 17672 | 6714 | 7009
+ [src/Os_optimization/solution.s](src/Os_optimization/solution.s)  | -Os | 513 | 17672 | 9046 | 9461
+[src/optimized.s](src/optimized.s)  | &mdash; | 474 | 17352 | 6735 | 6883  
 
-
+### Вывод
+Модифицированная программа показала отличные результаты: она стала лидером не только по размеру ассемблерного и исполняемого файлов, но и смогла показать лучшие результаты по времени исполнения. ИДЗ удалось!! :)
