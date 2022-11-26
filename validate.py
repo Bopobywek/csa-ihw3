@@ -62,7 +62,7 @@ def validate(path_to_program, path_to_test, verbose, use_files=False):
     return abs(program_answer - answer) < PRECISION
 
 
-parser = argparse.ArgumentParser(description='Checker for IHW2')
+parser = argparse.ArgumentParser(description='Checker for IHW3')
 parser.add_argument("path_to_program", type=file_path)
 parser.add_argument("path_to_tests", type=dir_path)
 parser.add_argument('-f', '--use-files', dest="use_files", action='store_true')
